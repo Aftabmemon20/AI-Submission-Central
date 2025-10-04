@@ -1,0 +1,26 @@
+services:
+  agent:
+    build: ./agent
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./agent:/app
+    container_name: asc_agent
+    env_file:
+      - .env
+
+  github-reader:
+    build: ./github_reader
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./github_reader:/app
+    container_name: asc_github_reader
+
+  video-parser:
+    build: ./video_parser
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./video_parser:/app
+    container_name: asc_video_parser

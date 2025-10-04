@@ -1,0 +1,8 @@
+Flask
+Flask-SQLAlchemy
+Flask-CORS
+requests
+python-dotenv
+cerebras_cloud_sdk
+yt-dlp
+gunicorn

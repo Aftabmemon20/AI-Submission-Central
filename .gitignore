@@ -1,0 +1,20 @@
+# Ignore Node.js dependencies and build files
+/frontend/node_modules/
+/frontend/.next/
+/frontend/out/
+
+# CRITICAL: Ignore all secret environment files
+.env
+/frontend/.env.local
+
+# Ignore Python virtual environments and caches
+**/__pycache__/
+*.pyc
+
+# Ignore the local database file
+/agent/hackathon.db
+hackathon.db
+
+# Ignore OS-specific files
+.DS_Store
+Thumbs.db
