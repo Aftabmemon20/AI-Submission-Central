@@ -8,4 +8,4 @@ RUN pip install -r requirements.txt
 COPY . .
 
 # Use gunicorn to run the app factory, making it more robust
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:create_app()"]
+CMD gunicorn --bind 0.0.0.0:$PORT "app:create_app()"
