@@ -1,7 +1,15 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { motion } from "motion/react";
-import { cn } from "@/lib/utils";
+
+interface MousePosition {
+  x: number | null;
+  y: number | null;
+}
+
+// Utility function to merge classNames
+function cn(...classes: (string | undefined | null | false)[]) {
+  return classes.filter(Boolean).join(' ');
+}
 
 export const MaskContainer = ({
   children,
@@ -17,48 +25,50 @@ export const MaskContainer = ({
   className?: string;
 }) => {
   const [isHovered, setIsHovered] = useState(false);
-  const [mousePosition, setMousePosition] = useState<any>({ x: null, y: null });
-  const containerRef = useRef<any>(null);
-  const updateMousePosition = (e: any) => {
+  const [mousePosition, setMousePosition] = useState<MousePosition>({ x: null, y: null });
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const updateMousePosition = (e: MouseEvent) => {
+    if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     setMousePosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
   };
-
+  
   useEffect(() => {
-    containerRef.current.addEventListener("mousemove", updateMousePosition);
+    const container = containerRef.current;
+    if (!container) return;
+    
+    container.addEventListener("mousemove", updateMousePosition);
     return () => {
-      if (containerRef.current) {
-        containerRef.current.removeEventListener(
-          "mousemove",
-          updateMousePosition,
-        );
-      }
+      container.removeEventListener("mousemove", updateMousePosition);
     };
   }, []);
-  let maskSize = isHovered ? revealSize : size;
-
+  
+  const maskSize = isHovered ? revealSize : size;
+  const backgroundColor = isHovered ? "rgb(15 23 42)" : "rgb(255 255 255)"; // slate-900 : white
+  
   return (
-    <motion.div
+    <div
       ref={containerRef}
-      className={cn("relative h-screen", className)}
-      animate={{
-        backgroundColor: isHovered ? "var(--slate-900)" : "var(--white)",
-      }}
-      transition={{
-        backgroundColor: { duration: 0.3 },
-      }}
+      className={cn("relative h-screen transition-colors duration-300", className)}
+      style={{ backgroundColor }}
     >
-      <motion.div
-        className="absolute flex h-full w-full items-center justify-center bg-black text-6xl [mask-image:url(/mask.svg)] [mask-repeat:no-repeat] [mask-size:40px] dark:bg-white"
-        animate={{
-          maskPosition: `${mousePosition.x - maskSize / 2}px ${
-            mousePosition.y - maskSize / 2
-          }px`,
+      <div
+        className="absolute flex h-full w-full items-center justify-center bg-black text-6xl dark:bg-white"
+        style={{
+          maskImage: "url(/mask.svg)",
+          WebkitMaskImage: "url(/mask.svg)",
+          maskRepeat: "no-repeat",
+          WebkitMaskRepeat: "no-repeat",
           maskSize: `${maskSize}px`,
-        }}
-        transition={{
-          maskSize: { duration: 0.3, ease: "easeInOut" },
-          maskPosition: { duration: 0.15, ease: "linear" },
+          WebkitMaskSize: `${maskSize}px`,
+          maskPosition: `${(mousePosition.x ?? 0) - maskSize / 2}px ${
+            (mousePosition.y ?? 0) - maskSize / 2
+          }px`,
+          WebkitMaskPosition: `${(mousePosition.x ?? 0) - maskSize / 2}px ${
+            (mousePosition.y ?? 0) - maskSize / 2
+          }px`,
+          transition: "mask-size 0.3s ease-in-out, mask-position 0.15s linear, -webkit-mask-size 0.3s ease-in-out, -webkit-mask-position 0.15s linear",
         }}
       >
         <div className="absolute inset-0 z-0 h-full w-full bg-black opacity-50 dark:bg-white" />
@@ -73,11 +83,10 @@ export const MaskContainer = ({
         >
           {children}
         </div>
-      </motion.div>
-
+      </div>
       <div className="flex h-full w-full items-center justify-center">
         {revealText}
       </div>
-    </motion.div>
+    </div>
   );
 };

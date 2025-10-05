@@ -35,9 +35,9 @@ const SubmissionForm = ({ hackathonId, hackathonName }: { hackathonId: number, h
             alert("Success! Your project has been submitted for evaluation.");
             // Clear the form
             setTeamName(''); setProjectTitle(''); setGithubUrl(''); setVideoUrl('');
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } catch (error: any) {
-            alert(`Submission failed: ${error.message}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+            alert(`Submission failed: ${errorMessage}`);
         } finally {
             setIsLoading(false);
         }
@@ -87,7 +87,8 @@ export default function SubmitterPortal() {
             } else {
                 setError(data.message || "Verification failed.");
             }
-        } catch (e) {
+        } catch (err) {
+            console.error('Verification error:', err);
             setError("An error occurred.");
         } finally {
             setIsLoading(false);

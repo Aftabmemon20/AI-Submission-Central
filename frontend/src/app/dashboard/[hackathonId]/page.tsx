@@ -3,7 +3,7 @@
 
 "use client";
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from '@/components/ui/button';
@@ -34,8 +34,8 @@ export default function DashboardPage({ params }: DashboardPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Yeh naya, behtar data fetching function hai
-  const getSubmissions = async () => {
+  // Yeh naya, behtar data fetching function hai - useCallback se wrap kiya
+  const getSubmissions = useCallback(async () => {
     if (!hackathonId) {
       setError('Hackathon ID is missing');
       setIsLoading(false);
@@ -54,11 +54,11 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [hackathonId]);
 
   useEffect(() => {
     getSubmissions();
-  }, [hackathonId]);
+  }, [hackathonId, getSubmissions]);
 
   // Yeh hamara purana filtering logic hai
   const acceptedProjects = submissions.filter((s) => s.status === 'AI_ACCEPTED');
