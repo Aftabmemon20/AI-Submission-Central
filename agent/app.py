@@ -41,7 +41,20 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///hackathon.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
-    cors.init_app(app, resources={r"/*": {"origins": "*"}})
+    
+    # UPDATED CORS CONFIGURATION
+    cors.init_app(app, resources={
+        r"/*": {
+            "origins": [
+                "http://localhost:3000",
+                "https://ai-submission-central.vercel.app",
+                "https://*.vercel.app"
+            ],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
+        }
+    })
 
     with app.app_context():
         db.create_all()
@@ -127,7 +140,6 @@ def create_app():
             
             data = request.get_json()
             
-            # Validate required fields
             if not data:
                 return jsonify({"error": "No data provided"}), 400
             
@@ -136,7 +148,6 @@ def create_app():
             if missing_fields:
                 return jsonify({"error": f"Missing required fields: {', '.join(missing_fields)}"}), 400
             
-            # Validate hackathon_id
             try:
                 hackathon_id = int(data.get('hackathon_id'))
             except (ValueError, TypeError):
@@ -146,7 +157,6 @@ def create_app():
             if not hackathon: 
                 return jsonify({"error": "Invalid Hackathon ID"}), 404
             
-            # Create new submission
             new_submission = Submission(
                 hackathon_id=hackathon_id, 
                 project_name=data.get('project_name', 'Untitled'), 
@@ -158,7 +168,6 @@ def create_app():
             db.session.commit()
             
             try:
-                # Call GitHub reader service - UPDATED URL
                 github_response = requests.post(
                     f"{GITHUB_READER_URL}/read-repo", 
                     json={"github_link": data['github_link']},
@@ -167,7 +176,6 @@ def create_app():
                 github_response.raise_for_status()
                 readme_content = github_response.json().get("readme_content", "")
                 
-                # Call video parser service - UPDATED URL
                 video_response = requests.post(
                     f"{VIDEO_PARSER_URL}/parse-video", 
                     json={"video_link": data['video_link']},
@@ -178,10 +186,8 @@ def create_app():
                 video_title = video_summary.get('title', 'N/A')
                 video_description = video_summary.get('description', 'N/A')
                 
-                # Prepare judge criteria
                 judge_criteria = hackathon.criteria or "Evaluate based on innovation and impact."
                 
-                # Create AI evaluation prompt
                 prompt_for_ai = f"""You are an expert hackathon judge. Evaluate this project based on the following criteria.
 
 Judge's Criteria: {judge_criteria}
@@ -199,7 +205,6 @@ Please evaluate this project and respond with ONLY a valid JSON object in this e
     "decision": "<ACCEPTED or REJECTED>"
 }}"""
                 
-                # Call Cerebras AI for evaluation - UPDATED to use API key
                 client = Cerebras(api_key=CEREBRAS_API_KEY)
                 chat_completion = client.chat.completions.create(
                     messages=[{"role": "user", "content": prompt_for_ai}], 
@@ -207,9 +212,7 @@ Please evaluate this project and respond with ONLY a valid JSON object in this e
                 )
                 ai_evaluation_str = chat_completion.choices[0].message.content
                 
-                # Parse AI response
                 try:
-                    # Extract JSON from response
                     json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', ai_evaluation_str, re.DOTALL)
                     if not json_match:
                         raise ValueError("No valid JSON found in AI response")
@@ -217,11 +220,9 @@ Please evaluate this project and respond with ONLY a valid JSON object in this e
                     json_str = json_match.group(0)
                     evaluation_data = json.loads(json_str)
                     
-                    # Validate and extract scores
                     score_innovation = float(evaluation_data.get('score_innovation', 0))
                     score_impact = float(evaluation_data.get('score_impact', 0))
                     
-                    # Clamp scores between 0 and 10
                     score_innovation = max(0.0, min(10.0, score_innovation))
                     score_impact = max(0.0, min(10.0, score_impact))
                     
@@ -251,7 +252,6 @@ Please evaluate this project and respond with ONLY a valid JSON object in this e
                 }), 201
 
             except requests.exceptions.RequestException as req_error:
-                # Handle service call errors
                 db.session.rollback()
                 new_submission.status = "SERVICE_ERROR"
                 new_submission.justification = f"Failed to communicate with evaluation services: {str(req_error)}"
@@ -262,7 +262,6 @@ Please evaluate this project and respond with ONLY a valid JSON object in this e
                 }), 500
                 
             except Exception as e:
-                # Handle all other errors
                 db.session.rollback()
                 new_submission.status = "SYSTEM_ERROR"
                 new_submission.justification = f"An unexpected error occurred: {str(e)}"
@@ -275,7 +274,6 @@ Please evaluate this project and respond with ONLY a valid JSON object in this e
 
         @app.route('/health', methods=['GET'])
         def health():
-            """Health check endpoint for Render"""
             return jsonify({
                 'status': 'healthy',
                 'service': 'agent',
