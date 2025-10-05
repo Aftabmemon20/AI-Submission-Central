@@ -1,0 +1,44 @@
+services:
+  # GitHub Reader Service
+  - type: web
+    name: asc-github-reader
+    env: docker
+    dockerfilePath: ./github_reader/Dockerfile
+    dockerContext: ./github_reader
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+
+  # Video Parser Service
+  - type: web
+    name: asc-video-parser
+    env: docker
+    dockerfilePath: ./video_parser/Dockerfile
+    dockerContext: ./video_parser
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+
+  # Main Agent Service
+  - type: web
+    name: asc-agent
+    env: docker
+    dockerfilePath: ./agent/Dockerfile
+    dockerContext: ./agent
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: GITHUB_READER_URL
+        value: https://asc-github-reader.onrender.com
+      - key: VIDEO_PARSER_URL
+        value: https://asc-video-parser.onrender.com
+      - key: DATABASE_URL
+        value: sqlite:///./hackathon.db

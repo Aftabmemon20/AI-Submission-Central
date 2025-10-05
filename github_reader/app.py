@@ -39,6 +39,8 @@ def read_repo():
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
+@app.route('/health')
+def health():
+    return {'status': 'healthy', 'service': 'github-reader'}, 200
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)

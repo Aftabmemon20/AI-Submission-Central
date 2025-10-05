@@ -5,4 +5,4 @@ requests
 python-dotenv
 cerebras_cloud_sdk
 yt-dlp
-gunicorn
+gunicorn==21.2.0

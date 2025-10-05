@@ -40,6 +40,9 @@ def parse_video():
     except Exception as e:
         # If the link is not a valid video, return a helpful error
         return jsonify({"success": False, "error": f"Could not process video link: {str(e)}"}), 500
+@app.route('/health')
+def health():
+    return {'status': 'healthy', 'service': 'video-parser'}, 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5002, debug=True)

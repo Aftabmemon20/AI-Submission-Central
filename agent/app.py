@@ -10,6 +10,11 @@ from flask_cors import CORS, cross_origin
 from dotenv import load_dotenv
 from cerebras.cloud.sdk import Cerebras
 
+# Service URLs - will use environment variables when deployed to Render
+GITHUB_READER_URL = os.getenv('GITHUB_READER_URL', 'http://github-reader:5001')
+VIDEO_PARSER_URL = os.getenv('VIDEO_PARSER_URL', 'http://video-parser:5002')
+CEREBRAS_API_KEY = os.getenv('CEREBRAS_API_KEY')
+
 db = SQLAlchemy()
 cors = CORS()
 
@@ -153,18 +158,18 @@ def create_app():
             db.session.commit()
             
             try:
-                # Call GitHub reader service
+                # Call GitHub reader service - UPDATED URL
                 github_response = requests.post(
-                    "http://github-reader:5001/read-repo", 
+                    f"{GITHUB_READER_URL}/read-repo", 
                     json={"github_link": data['github_link']},
                     timeout=30
                 )
                 github_response.raise_for_status()
                 readme_content = github_response.json().get("readme_content", "")
                 
-                # Call video parser service
+                # Call video parser service - UPDATED URL
                 video_response = requests.post(
-                    "http://video-parser:5002/parse-video", 
+                    f"{VIDEO_PARSER_URL}/parse-video", 
                     json={"video_link": data['video_link']},
                     timeout=30
                 )
@@ -194,8 +199,8 @@ Please evaluate this project and respond with ONLY a valid JSON object in this e
     "decision": "<ACCEPTED or REJECTED>"
 }}"""
                 
-                # Call Cerebras AI for evaluation
-                client = Cerebras()
+                # Call Cerebras AI for evaluation - UPDATED to use API key
+                client = Cerebras(api_key=CEREBRAS_API_KEY)
                 chat_completion = client.chat.completions.create(
                     messages=[{"role": "user", "content": prompt_for_ai}], 
                     model="llama-4-scout-17b-16e-instruct"
@@ -267,6 +272,15 @@ Please evaluate this project and respond with ONLY a valid JSON object in this e
                     "error": f"An unexpected error occurred: {str(e)}",
                     "submission_id": new_submission.id
                 }), 500
+
+        @app.route('/health', methods=['GET'])
+        def health():
+            """Health check endpoint for Render"""
+            return jsonify({
+                'status': 'healthy',
+                'service': 'agent',
+                'database': 'connected'
+            }), 200
 
     return app
 
