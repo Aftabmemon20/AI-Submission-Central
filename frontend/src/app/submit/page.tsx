@@ -1,11 +1,10 @@
 "use client";
-
-import { use, useEffect, useState, useCallback } from 'react';
+import { API_ENDPOINTS } from "@/config/api";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { API_ENDPOINTS } from "@/config/api";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 interface Submission {
   id: number;
@@ -18,32 +17,35 @@ interface Submission {
 }
 
 interface DashboardPageProps {
-  params: Promise<{ hackathonId: string; }>;
+  params: { hackathonId: string };
 }
 
 export default function DashboardPage({ params }: DashboardPageProps) {
-  const { hackathonId } = use(params);
-  
+  const { hackathonId } = params; // ✅ FIXED — no use()
+
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const getSubmissions = useCallback(async () => {
     if (!hackathonId) {
-      setError('Hackathon ID is missing');
+      setError("Hackathon ID is missing");
       setIsLoading(false);
       return;
     }
+
     setIsLoading(true);
     try {
-      const res = await fetch(API_ENDPOINTS.getDashboard(hackathonId));
-      if (!res.ok) throw new Error('Failed to fetch data');
+      const res = await fetch(API_ENDPOINTS.getDashboard(hackathonId), {
+        cache: "no-store",
+      });
+      if (!res.ok) throw new Error("Failed to fetch data");
       const data = await res.json();
       setSubmissions(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching submissions:', err);
-      setError('Failed to load submissions. Please try again.');
+      console.error("Error fetching submissions:", err);
+      setError("Failed to load submissions. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -51,10 +53,10 @@ export default function DashboardPage({ params }: DashboardPageProps) {
 
   useEffect(() => {
     getSubmissions();
-  }, [hackathonId, getSubmissions]);
+  }, [getSubmissions]);
 
-  const acceptedProjects = submissions.filter((s) => s.status === 'AI_ACCEPTED');
-  const rejectedProjects = submissions.filter((s) => s.status === 'AI_REJECTED');
+  const acceptedProjects = submissions.filter((s) => s.status === "AI_ACCEPTED");
+  const rejectedProjects = submissions.filter((s) => s.status === "AI_REJECTED");
 
   if (isLoading) {
     return (
@@ -68,7 +70,9 @@ export default function DashboardPage({ params }: DashboardPageProps) {
     return (
       <div className="container mx-auto p-8 text-center text-white">
         <p className="text-lg text-red-400">{error}</p>
-        <Button onClick={getSubmissions} className="mt-4">Try Again</Button>
+        <Button onClick={getSubmissions} className="mt-4">
+          Try Again
+        </Button>
       </div>
     );
   }
@@ -103,10 +107,10 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                     <Badge className="bg-green-200 text-green-900">Accepted</Badge>
                   </CardTitle>
                   <CardDescription>
-                    <a 
-                      href={sub.github_link} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
+                    <a
+                      href={sub.github_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-blue-400 hover:underline"
                     >
                       View on GitHub
@@ -115,8 +119,18 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 </CardHeader>
                 <CardContent className="text-neutral-300">
                   <div className="flex gap-4 mb-2 font-semibold">
-                    <p>Innovation: <span className="text-white">{sub.score_innovation?.toFixed(1) || 'N/A'}</span></p>
-                    <p>Impact: <span className="text-white">{sub.score_impact?.toFixed(1) || 'N/A'}</span></p>
+                    <p>
+                      Innovation:{" "}
+                      <span className="text-white">
+                        {sub.score_innovation?.toFixed(1) || "N/A"}
+                      </span>
+                    </p>
+                    <p>
+                      Impact:{" "}
+                      <span className="text-white">
+                        {sub.score_impact?.toFixed(1) || "N/A"}
+                      </span>
+                    </p>
                   </div>
                   <p className="text-sm text-neutral-400">{sub.justification}</p>
                 </CardContent>
@@ -138,10 +152,10 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                     <Badge variant="destructive">Rejected</Badge>
                   </CardTitle>
                   <CardDescription>
-                    <a 
-                      href={sub.github_link} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
+                    <a
+                      href={sub.github_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-blue-400 hover:underline"
                     >
                       View on GitHub
@@ -150,8 +164,18 @@ export default function DashboardPage({ params }: DashboardPageProps) {
                 </CardHeader>
                 <CardContent className="text-neutral-300">
                   <div className="flex gap-4 mb-2 font-semibold">
-                    <p>Innovation: <span className="text-white">{sub.score_innovation?.toFixed(1) || 'N/A'}</span></p>
-                    <p>Impact: <span className="text-white">{sub.score_impact?.toFixed(1) || 'N/A'}</span></p>
+                    <p>
+                      Innovation:{" "}
+                      <span className="text-white">
+                        {sub.score_innovation?.toFixed(1) || "N/A"}
+                      </span>
+                    </p>
+                    <p>
+                      Impact:{" "}
+                      <span className="text-white">
+                        {sub.score_impact?.toFixed(1) || "N/A"}
+                      </span>
+                    </p>
                   </div>
                   <p className="text-sm text-neutral-400">{sub.justification}</p>
                 </CardContent>
