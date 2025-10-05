@@ -1,122 +1,165 @@
 "use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { use, useEffect, useState, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { API_ENDPOINTS } from "@/config/api";
 
-// This is the full submission form component
-const SubmissionForm = ({ hackathonId, hackathonName }: { hackathonId: number, hackathonName: string }) => {
-    const [isLoading, setIsLoading] = useState(false);
-    const [teamName, setTeamName] = useState('');
-    const [projectTitle, setProjectTitle] = useState('');
-    const [githubUrl, setGithubUrl] = useState('');
-    const [videoUrl, setVideoUrl] = useState('');
+interface Submission {
+  id: number;
+  project_name: string;
+  github_link: string;
+  status: "AI_ACCEPTED" | "AI_REJECTED" | "NEW" | "AI_ERROR";
+  score_innovation: number | null;
+  score_impact: number | null;
+  justification: string | null;
+}
 
-    const handleSubmit = async (event: React.FormEvent) => {
-        event.preventDefault();
-        setIsLoading(true);
-        try {
-            const response = await fetch('http://localhost:5000/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    hackathon_id: hackathonId, // Include the verified Hackathon ID
-                    project_name: `${projectTitle} (${teamName})`,
-                    github_link: githubUrl,
-                    video_link: videoUrl,
-                }),
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Submission failed');
-            }
-            alert("Success! Your project has been submitted for evaluation.");
-            // Clear the form
-            setTeamName(''); setProjectTitle(''); setGithubUrl(''); setVideoUrl('');
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-            alert(`Submission failed: ${errorMessage}`);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    return (
-      <form onSubmit={handleSubmit}>
-          <Card className="max-w-2xl mx-auto">
-              <CardHeader>
-                  <CardTitle>Submit to {hackathonName}</CardTitle>
-                  <CardDescription>Fill out the details below to have your project evaluated by the AI.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                  {/* Form fields are the same as before */}
-                  <div className="space-y-2"><Label>Team name</Label><Input value={teamName} onChange={e => setTeamName(e.target.value)} required /></div>
-                  <div className="space-y-2"><Label>Project title</Label><Input value={projectTitle} onChange={e => setProjectTitle(e.target.value)} required /></div>
-                  <div className="space-y-2"><Label>GitHub repository URL</Label><Input type="url" value={githubUrl} onChange={e => setGithubUrl(e.target.value)} required /></div>
-                  <div className="space-y-2"><Label>Video demo URL</Label><Input type="url" value={videoUrl} onChange={e => setVideoUrl(e.target.value)} required /></div>
-              </CardContent>
-              <CardFooter>
-                  <Button type="submit" className="w-full" disabled={isLoading}>{isLoading ? 'Submitting...' : 'Submit Project'}</Button>
-              </CardFooter>
-          </Card>
-      </form>
-    );
-};
+interface DashboardPageProps {
+  params: Promise<{ hackathonId: string; }>;
+}
 
-// This is the main page component that decides what to show
-export default function SubmitterPortal() {
-    const [hackathonId, setHackathonId] = useState("");
-    const [verifiedHackathon, setVerifiedHackathon] = useState<{ id: number; name: string } | null>(null);
-    const [error, setError] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+export default function DashboardPage({ params }: DashboardPageProps) {
+  const { hackathonId } = use(params);
+  
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    const handleVerify = async () => {
-        setIsLoading(true);
-        setError("");
-        try {
-            const response = await fetch('http://localhost:5000/api/hackathons/verify', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ hackathon_id: parseInt(hackathonId) }),
-            });
-            const data = await response.json();
-            if (response.ok && data.valid) {
-                setVerifiedHackathon({ id: parseInt(hackathonId), name: data.hackathonName });
-            } else {
-                setError(data.message || "Verification failed.");
-            }
-        } catch (err) {
-            console.error('Verification error:', err);
-            setError("An error occurred.");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    if (verifiedHackathon) {
-        // If the ID is verified, show the full submission form
-        return <div className="container mx-auto py-12"><SubmissionForm hackathonId={verifiedHackathon.id} hackathonName={verifiedHackathon.name} /></div>;
+  const getSubmissions = useCallback(async () => {
+    if (!hackathonId) {
+      setError('Hackathon ID is missing');
+      setIsLoading(false);
+      return;
     }
+    setIsLoading(true);
+    try {
+      const res = await fetch(API_ENDPOINTS.getDashboard(hackathonId));
+      if (!res.ok) throw new Error('Failed to fetch data');
+      const data = await res.json();
+      setSubmissions(data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching submissions:', err);
+      setError('Failed to load submissions. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hackathonId]);
 
-    // If no ID is verified, show the verification form
+  useEffect(() => {
+    getSubmissions();
+  }, [hackathonId, getSubmissions]);
+
+  const acceptedProjects = submissions.filter((s) => s.status === 'AI_ACCEPTED');
+  const rejectedProjects = submissions.filter((s) => s.status === 'AI_REJECTED');
+
+  if (isLoading) {
     return (
-        <div className="container mx-auto py-20">
-            <Card className="max-w-md mx-auto">
-                <CardHeader>
-                    <CardTitle>Join a Hackathon</CardTitle>
-                    <CardDescription>Please enter the Hack ID provided by your judge to continue.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    <Label htmlFor="hack-id">Hack ID</Label>
-                    <Input id="hack-id" value={hackathonId} onChange={e => setHackathonId(e.target.value)} placeholder="e.g. 123" />
-                    {error && <p className="text-sm text-red-500">{error}</p>}
-                </CardContent>
-                <CardFooter>
-                    <Button onClick={handleVerify} className="w-full" disabled={isLoading}>{isLoading ? 'Verifying...' : 'Verify & Continue'}</Button>
-                </CardFooter>
-            </Card>
-        </div>
+      <div className="container mx-auto p-8 text-center text-white">
+        <p className="text-lg">Loading submissions...</p>
+      </div>
     );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-8 text-center text-white">
+        <p className="text-lg text-red-400">{error}</p>
+        <Button onClick={getSubmissions} className="mt-4">Try Again</Button>
+      </div>
+    );
+  }
+
+  return (
+    <main className="container mx-auto p-8 bg-black min-h-screen text-white">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">Judges Dashboard</h1>
+          <p className="text-muted-foreground">
+            Submissions for Hackathon ID: <span className="font-bold text-white">{hackathonId}</span>
+          </p>
+        </div>
+        <div className="flex gap-4 items-center">
+          <Button variant="outline" asChild>
+            <Link href="/judge">Back to Judge Portal</Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+          <h2 className="text-2xl font-semibold mb-4 text-green-400">
+            AI Accepted ({acceptedProjects.length})
+          </h2>
+          <div className="space-y-4">
+            {acceptedProjects.map((sub) => (
+              <Card key={sub.id} className="bg-neutral-900 border-green-500/50">
+                <CardHeader>
+                  <CardTitle className="flex justify-between items-start text-white">
+                    <span>{sub.project_name}</span>
+                    <Badge className="bg-green-200 text-green-900">Accepted</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    <a 
+                      href={sub.github_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-blue-400 hover:underline"
+                    >
+                      View on GitHub
+                    </a>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-neutral-300">
+                  <div className="flex gap-4 mb-2 font-semibold">
+                    <p>Innovation: <span className="text-white">{sub.score_innovation?.toFixed(1) || 'N/A'}</span></p>
+                    <p>Impact: <span className="text-white">{sub.score_impact?.toFixed(1) || 'N/A'}</span></p>
+                  </div>
+                  <p className="text-sm text-neutral-400">{sub.justification}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-semibold mb-4 text-red-400">
+            AI Rejected ({rejectedProjects.length})
+          </h2>
+          <div className="space-y-4">
+            {rejectedProjects.map((sub) => (
+              <Card key={sub.id} className="bg-neutral-900 border-red-500/50">
+                <CardHeader>
+                  <CardTitle className="flex justify-between items-start text-white">
+                    <span>{sub.project_name}</span>
+                    <Badge variant="destructive">Rejected</Badge>
+                  </CardTitle>
+                  <CardDescription>
+                    <a 
+                      href={sub.github_link} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="text-blue-400 hover:underline"
+                    >
+                      View on GitHub
+                    </a>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-neutral-300">
+                  <div className="flex gap-4 mb-2 font-semibold">
+                    <p>Innovation: <span className="text-white">{sub.score_innovation?.toFixed(1) || 'N/A'}</span></p>
+                    <p>Impact: <span className="text-white">{sub.score_impact?.toFixed(1) || 'N/A'}</span></p>
+                  </div>
+                  <p className="text-sm text-neutral-400">{sub.justification}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }
