@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 
 interface MousePosition {
   x: number | null;
@@ -45,30 +46,29 @@ export const MaskContainer = ({
   }, []);
   
   const maskSize = isHovered ? revealSize : size;
-  const backgroundColor = isHovered ? "rgb(15 23 42)" : "rgb(255 255 255)"; // slate-900 : white
   
   return (
-    <div
+    <motion.div
       ref={containerRef}
-      className={cn("relative h-screen transition-colors duration-300", className)}
-      style={{ backgroundColor }}
+      className={cn("relative h-screen", className)}
+      animate={{
+        backgroundColor: isHovered ? "var(--slate-900)" : "var(--white)",
+      }}
+      transition={{
+        backgroundColor: { duration: 0.3 },
+      }}
     >
-      <div
-        className="absolute flex h-full w-full items-center justify-center bg-black text-6xl dark:bg-white"
-        style={{
-          maskImage: "url(/mask.svg)",
-          WebkitMaskImage: "url(/mask.svg)",
-          maskRepeat: "no-repeat",
-          WebkitMaskRepeat: "no-repeat",
-          maskSize: `${maskSize}px`,
-          WebkitMaskSize: `${maskSize}px`,
+      <motion.div
+        className="absolute flex h-full w-full items-center justify-center bg-black text-6xl [mask-image:url(/mask.svg)] [mask-repeat:no-repeat] [mask-size:40px] dark:bg-white"
+        animate={{
           maskPosition: `${(mousePosition.x ?? 0) - maskSize / 2}px ${
             (mousePosition.y ?? 0) - maskSize / 2
           }px`,
-          WebkitMaskPosition: `${(mousePosition.x ?? 0) - maskSize / 2}px ${
-            (mousePosition.y ?? 0) - maskSize / 2
-          }px`,
-          transition: "mask-size 0.3s ease-in-out, mask-position 0.15s linear, -webkit-mask-size 0.3s ease-in-out, -webkit-mask-position 0.15s linear",
+          maskSize: `${maskSize}px`,
+        }}
+        transition={{
+          maskSize: { duration: 0.3, ease: "easeInOut" },
+          maskPosition: { duration: 0.15, ease: "linear" },
         }}
       >
         <div className="absolute inset-0 z-0 h-full w-full bg-black opacity-50 dark:bg-white" />
@@ -83,10 +83,10 @@ export const MaskContainer = ({
         >
           {children}
         </div>
-      </div>
+      </motion.div>
       <div className="flex h-full w-full items-center justify-center">
         {revealText}
       </div>
-    </div>
+    </motion.div>
   );
 };
