@@ -1,3 +1,4 @@
+#(CAUTION-IF YOU WANT TO TEST IT LOCALLY THEN USE THE FIRST COMMIT VERSION NOT CURRENT)#
 # AI Submission Central (A.S.C.)
 
 **The Future of Hackathon Judging is Here.**
