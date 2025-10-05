@@ -6,3 +6,4 @@ python-dotenv
 cerebras_cloud_sdk
 yt-dlp
 gunicorn==21.2.0
+psycopg2-binary

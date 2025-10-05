@@ -38,7 +38,7 @@ class Submission(db.Model):
 def create_app():
     load_dotenv()
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///hackathon.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///hackathon.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     db.init_app(app)
     cors.init_app(app, resources={r"/*": {"origins": "*"}})
